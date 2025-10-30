@@ -1,0 +1,210 @@
+[
+  {
+    "query": "I’d like to work in AI product management and understand both tech and business sides.",
+    "relevant_courses": [
+      "HS1501",
+      "IS2108",
+      "IT1244"
+    ]
+  },
+  {
+    "query": "I want to learn machine learning and deep learning for real-world applications.",
+    "relevant_courses": [
+      "CG3201",
+      "DSA5105",
+      "CS3244"
+    ]
+  },
+  {
+    "query": "I’m interested in data mining, big data systems, and analytics engineering.",
+    "relevant_courses": [
+      "CS5425",
+      "CS3223",
+      "CS2102"
+    ]
+  },
+  {
+    "query": "I want courses on software engineering, web systems, and building scalable apps.",
+    "relevant_courses": [
+      "CS2030",
+      "CS2040",
+      "CS2100"
+    ]
+  },
+  {
+    "query": "I’m keen on cybersecurity and network defense fundamentals.",
+    "relevant_courses": [
+      "CS3235",
+      "CS2105",
+      "CS2107"
+    ]
+  },
+  {
+    "query": "I plan to start a startup and want entrepreneurship and innovation modules.",
+    "relevant_courses": [
+      "IS5116",
+      "ETP3222",
+      "MT4001"
+    ]
+  },
+  {
+    "query": "I want to learn business analytics and data-driven decision making.",
+    "relevant_courses": [
+      "IS5152",
+      "BT4211",
+      "BT1101"
+    ]
+  },
+  {
+    "query": "Interested in marketing analytics and consumer insights.",
+    "relevant_courses": [
+      "BT4211",
+      "BMK5100",
+      "BT1101"
+    ]
+  },
+  {
+    "query": "I’m fascinated by quantitative finance and financial modeling.",
+    "relevant_courses": [
+      "QF1100",
+      "QF2104",
+      "QF3103"
+    ]
+  },
+  {
+    "query": "I want to learn econometrics and causal inference for policy/markets.",
+    "relevant_courses": [
+      "BT2101",
+      "EC4303",
+      "EC2101"
+    ]
+  },
+  {
+    "query": "I want to study sustainability, climate policy, and environmental analytics.",
+    "relevant_courses": [
+      "BL5331",
+      "SP3275",
+      "BMP5103"
+    ]
+  },
+  {
+    "query": "Looking for urban planning, smart cities, and geospatial analytics.",
+    "relevant_courses": [
+      "YSS3337",
+      "TPA4220",
+      "BT4015"
+    ]
+  },
+  {
+    "query": "I’m interested in bioinformatics, computational biology, and genomics analytics.",
+    "relevant_courses": [
+      "BN2301",
+      "ZB2101",
+      "LSM1301"
+    ]
+  },
+  {
+    "query": "I want healthcare analytics and public health policy modules.",
+    "relevant_courses": [
+      "NUR2502",
+      "IE5205",
+      "TBA4250"
+    ]
+  },
+  {
+    "query": "I want HCI, UX design, and human factors courses.",
+    "relevant_courses": [
+      "CS3240",
+      "CDE5311",
+      "CS3249"
+    ]
+  },
+  {
+    "query": "I’m curious about cognitive psychology and behavioural science.",
+    "relevant_courses": [
+      "PL3102",
+      "PL3285",
+      "PL3103"
+    ]
+  },
+  {
+    "query": "I want to improve academic writing, communication, and presentation skills.",
+    "relevant_courses": [
+      "ES1000",
+      "ES1103",
+      "ES2660"
+    ]
+  },
+  {
+    "query": "I’m looking for tech ethics, data privacy, and AI governance courses.",
+    "relevant_courses": [
+      "CS1010",
+      "CS3235",
+      "CS2040"
+    ]
+  },
+  {
+    "query": "I want to learn robotics, control systems, and perception.",
+    "relevant_courses": [
+      "ee4308",
+      "EE4309",
+      "RB2203"
+    ]
+  },
+  {
+    "query": "I’m into operations research, optimization, and logistics.",
+    "relevant_courses": [
+      "IE5001",
+      "IE2110",
+      "IE4210"
+    ]
+  },
+  {
+    "query": "I care about social policy, governance, and public administration.",
+    "relevant_courses": [
+      "PS1101",
+      "PP5103",
+      "PS3271"
+    ]
+  },
+  {
+    "query": "I want to explore media studies, society, and technology.",
+    "relevant_courses": [
+      "NM2101",
+      "NM4102",
+      "NM2104"
+    ]
+  },
+  {
+    "query": "I need stronger foundations in probability, statistics, and linear algebra.",
+    "relevant_courses": [
+      "MA2001",
+      "ST2131",
+      "ST2132"
+    ]
+  },
+  {
+    "query": "I’d like energy systems, renewable technologies, and sustainability engineering.",
+    "relevant_courses": [
+      "ME1103",
+      "ME5210",
+      "EE2022"
+    ]
+  },
+  {
+    "query": "I’m interested in materials science, nanotech, and semiconductors.",
+    "relevant_courses": [
+      "MLE2105",
+      "MLE5211",
+      "HSI2015"
+    ]
+  },
+  {
+    "query": "I’m considering a research track and want advanced seminars or capstone-style modules.",
+    "relevant_courses": [
+      "CM5192",
+      "SM5101",
+      "ABM5004"
+    ]
+  }
+]
