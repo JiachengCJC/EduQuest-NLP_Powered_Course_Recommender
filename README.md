@@ -1,4 +1,4 @@
-# EduQuest: NLP-Powered Semantic Course Recommender
+# EduQuest: NLP-Powered Course Recommender
 
 EduQuest helps NUS students discover suitable modules with **free-text queries** that capture intent, not keywords. Instead of literal matching like NUSMods, the system uses LLMs, dense embeddings, and FAISS vector search to understand what the learner is actually looking for. Everything runs **fully locally with Ollama**, so no API keys or external calls are required (external APIs can be integrated if preferred).
 
@@ -10,8 +10,6 @@ EduQuest helps NUS students discover suitable modules with **free-text queries**
 5. [Running the UI](#-running-the-ui)
 6. [Typical Workflow](#-typical-workflow)
 7. [Dataset](#-dataset)
-8. [Project Structure](#-project-structure)
-9. [Evaluation](#-evaluation)
 
 ---
 
