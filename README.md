@@ -39,8 +39,7 @@ The entire pipeline can run offline. Swap in hosted APIs (OpenAI, Gemini, etc.) 
 ---
 
 ## 📸 Demo
-
-> _Coming soon — drop in a Loom/YouTube link showcasing the Streamlit UI once available._
+![Demo (Click!)](EduQuest_Demo.mov)
 
 ---
 
