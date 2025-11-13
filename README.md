@@ -39,7 +39,7 @@ The entire pipeline can run offline. Swap in hosted APIs (OpenAI, Gemini, etc.) 
 ---
 
 ## 📸 Demo
-![Demo (Click!)](EduQuest_Demo.mov)
+![Demo (Click!)](Demo.gif)
 
 ---
 
