@@ -90,7 +90,7 @@ streamlit run app.py
 
 ## 🧭 Typical Workflow
 
-1. Upload a `.pkl` dataset via the sidebar.
+1. Upload a `.pkl`(cleaned_nusmods_with_embeddings) dataset via the sidebar.
 2. Click **Check Embeddings**.  
    - If the uploaded file lacks an `embedding` column, click **Generate Embeddings** (the app will call `nomic-embed-text` to populate embeddings).
 3. Enter a free-text query describing learning goals, interests, or constraints.
@@ -98,7 +98,7 @@ streamlit run app.py
    - **LLM + Cosine Similarity**  
    - **FAISS (faster) + optional rationale generation**
 5. (Optional) Filter courses by prefix (e.g., `CS`, `IS`) and level (e.g., 1000, 2000).
-6. Click **Run Model** to view the ranked recommendations and rationales (if enabled).
+6. Click **Run Recommendations** to view the ranked recommendations and rationales (if enabled).
 
 ---
 
