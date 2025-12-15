@@ -123,4 +123,4 @@ Files included under `src/`:
 You can swap in any university dataset so long as it follows the same schema.
 
 ---
-![Repo Views](https://komarev.com/ghpvc/?username=JIACHENGCJC&label=Repo+Views&color=0e75b6&style=flat)
+![Repo Views](https://komarev.com/ghpvc/?username=JIACHENGCJC-EDUQUESTNLP&label=Repo+Views&color=0e75b6&style=flat)
