@@ -7,7 +7,7 @@ import asyncio
 import logging
 from typing import List, Optional, Dict, Any
 
-from EduQuest.client import LocalOllamaClient
+from EduQuest.client import LocalVLLMClient
 from EduQuest.similarity import SimilarityCalculator
 
 logging.basicConfig(level=logging.WARNING)
@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 class EmbeddingRecommender:
     """
     Core recommender class that uses FAISS for deterministic retrieval
-    and Ollama for explanation generation.
+    and vLLM for explanation generation.
     """
 
-    def __init__(self, openai_client: LocalOllamaClient, similarity_calculator: SimilarityCalculator):
+    def __init__(self, openai_client: LocalVLLMClient, similarity_calculator: SimilarityCalculator):
         self.openai_client = openai_client
         self.similarity_calculator = similarity_calculator
         self.courses_df: Optional[pd.DataFrame] = None
@@ -130,7 +130,7 @@ class EmbeddingRecommender:
     # Step 4: Deterministic recommender
     # -------------------------------------------------------------------
     async def recommend_deterministic(self, query: str, top_k: int = 10, levels: Optional[List[int]] = None, 
-                                      prefix: Optional[List[str]] = None, type: int = 0) -> str:
+                                      prefix: Optional[List[str]] = None, type: str = "Without Rationales") -> str:
         """
         Stable two-stage recommender (FAISS + LLM explanation).
         """
@@ -148,7 +148,7 @@ class EmbeddingRecommender:
             if filtered_df.empty:
                 return "No courses match the given prefix/level filter."
 
-            if type == 0:
+            if type == "Without Rationales":
                 top_k = 50
             if prefix is None and levels is None:
                 top_courses = await self.retrieve_similar_courses(query, top_k)
@@ -157,7 +157,7 @@ class EmbeddingRecommender:
 
             top_courses = top_courses.sort_values(by="similarity", ascending=False).reset_index(drop=True)
 
-            if type == 0:
+            if type == "Without Rationales":
                 return "No recommendations", top_courses
             
             recommendations = await self.explain_courses(query, top_courses)
@@ -170,7 +170,7 @@ class EmbeddingRecommender:
     # -------------------------------------------------------------------
     # Original (LLM-ranking) recommender
     # -------------------------------------------------------------------
-    async def recommend(self, query: str, levels: Optional[List[int]] = None, prefix: Optional[List[str]] = None, top_k_rank: int = 10, type: int = 0, rationales: Optional[int] = 0) -> str:
+    async def recommend(self, query: str, levels: Optional[List[int]] = None, prefix: Optional[List[str]] = None, top_k_rank: int = 10, type: str = "Without Rationales", rationales: Optional[int] = "Cosine similarity ranking") -> str:
         """
         Legacy recommender: LLM ranks courses directly by relevance and fit.
         """
@@ -202,7 +202,7 @@ class EmbeddingRecommender:
 
             filtered_df = filtered_df.sort_values(by="similarity", ascending=False).reset_index(drop=True)
 
-            if type == 0:
+            if type == "Without Rationales":
                 return "No recommendations", filtered_df
 
             course_string = "\n".join(
@@ -210,7 +210,7 @@ class EmbeddingRecommender:
                 for _, row in filtered_df.iterrows()
             )
 
-            if rationales == 0:
+            if rationales == "Cosine similarity ranking":
                 recommendations = await self.explain_courses(query, filtered_df.head(10))
                 return recommendations, filtered_df
             

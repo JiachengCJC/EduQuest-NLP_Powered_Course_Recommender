@@ -1,5 +1,7 @@
 # %%
-from EduQuest.client import LocalOllamaClient
+import os
+
+from EduQuest.client import LocalVLLMClient
 from EduQuest.similarity import CosineSimilarityCalculator
 from EduQuest.recommend import EmbeddingRecommender
 
@@ -66,10 +68,16 @@ async def main():
     test_data = pd.read_csv("../data/tidy_student_course_selection.csv")
 
     # Initialize recommender
-    client = LocalOllamaClient(
-        generator_model="mistral",
-        rec_model="qwen2.5:7b-instruct",
-        embedding_model="nomic-embed-text"
+    chat_base_url = os.getenv("VLLM_CHAT_BASE_URL", "http://127.0.0.1:8000/v1")
+    embedding_base_url = os.getenv("VLLM_EMBEDDING_BASE_URL", chat_base_url)
+
+    client = LocalVLLMClient(
+        generator_model=os.getenv("VLLM_GENERATOR_MODEL", "mistral"),
+        rec_model=os.getenv("VLLM_REC_MODEL", "qwen2.5:7b-instruct"),
+        embedding_model=os.getenv("VLLM_EMBEDDING_MODEL", "nomic-embed-text"),
+        chat_base_url=chat_base_url,
+        embedding_base_url=embedding_base_url,
+        api_key=os.getenv("VLLM_API_KEY", "EMPTY"),
     )
     sim_calc = CosineSimilarityCalculator()
     Sim_recommender = EmbeddingRecommender(client, sim_calc)
@@ -111,6 +119,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
 

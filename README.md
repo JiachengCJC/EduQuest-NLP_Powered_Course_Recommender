@@ -1,6 +1,6 @@
 # EduQuest: NLP-Powered Course Recommender
 
-EduQuest helps NUS students discover suitable modules with **free-text queries** that capture intent, not keywords. Instead of literal matching like NUSMods, the system uses LLMs, dense embeddings, and FAISS vector search to understand what the learner is actually looking for. Everything runs **fully locally with Ollama**, so no API keys or external calls are required (external APIs can be integrated if preferred).
+EduQuest helps NUS students discover suitable modules with **free-text queries** that capture intent, not keywords. Instead of literal matching like NUSMods, the system uses LLMs, dense embeddings, and FAISS vector search to understand what the learner is actually looking for. Everything runs **fully locally with vLLM** via OpenAI-compatible endpoints, so no external API calls are required (hosted APIs can be integrated if preferred).
 
 ## Table of Contents
 1. [Features](#-features)
@@ -20,7 +20,7 @@ EduQuest helps NUS students discover suitable modules with **free-text queries**
 - ⚡ **FAISS vector search** enables sub-100 ms retrieval over 9k+ NUS modules.
 - 💬 **Optional rationale generation** with Qwen2.5‑7B for natural-language explanations.
 - 🖥️ **Streamlit UI** includes prefix/level filters and undergrad quick-select presets.
-- 🔒 **Privacy-first, 100% local** using Ollama-hosted models; reproducible experiments.
+- 🔒 **Privacy-first, 100% local** using vLLM-hosted models; reproducible experiments.
 - 🎯 **Evaluation benchmark** with 25 authentic student queries to measure efficacy.
 
 ---
@@ -29,7 +29,7 @@ EduQuest helps NUS students discover suitable modules with **free-text queries**
 
 | Stage | Tooling | Purpose |
 | --- | --- | --- |
-| 1. LLM Query Enrichment | Mistral 7B via Ollama | Expand ambiguous queries into richer semantic targets. |
+| 1. LLM Query Enrichment | Mistral 7B via vLLM | Expand ambiguous queries into richer semantic targets. |
 | 2. Embedding Generation | `nomic-embed-text` | Produce dense representations of course descriptions + enriched query. |
 | 3. Retrieval | Cosine similarity or FAISS | Return the top‑k semantically similar courses. |
 | 4. Explanation (optional) | Qwen2.5 7B-Instruct | Generate natural-language rationales for each recommendation. |
@@ -60,18 +60,35 @@ venv\Scripts\activate      # Windows
 
 ### 3. Install dependencies
 ```bash
-pip install -r requirements.txt
+pip install -r src/requirements.txt
 ```
 
-### 4. Install Ollama and pull required models
-1. Download Ollama from [ollama.com](https://ollama.com) and follow the installation instructions.
-2. Pull the models used in this project:
-   ```bash
-   ollama pull mistral
-   ollama pull qwen2.5:7b-instruct
-   ollama pull nomic-embed-text
-   ollama list             # verify downloads
-   ```
+### 4. Start vLLM server(s)
+Run OpenAI-compatible vLLM endpoints for chat and embeddings.
+
+Install vLLM if needed:
+```bash
+pip install vllm
+```
+
+Text generation server (example):
+```bash
+vllm serve mistral --host 0.0.0.0 --port 8000 --api-key EMPTY
+```
+
+Embedding server (example, can be same or separate host/port):
+```bash
+vllm serve nomic-embed-text --host 0.0.0.0 --port 8001 --api-key EMPTY --task embed
+```
+
+Use the model identifiers that your vLLM servers expose (Hugging Face model IDs or your configured served names).
+
+Then configure your runtime variables (recommended via `.env`):
+```bash
+cp .env.example .env
+# edit .env and set your model names / endpoints
+```
+The app loads `.env` automatically via `python-dotenv`.
 
 ---
 
@@ -80,7 +97,7 @@ pip install -r requirements.txt
 Launch the Streamlit interface from the repository root:
 
 ```bash
-streamlit run app.py
+streamlit run src/app.py
 ```
 
 > The UI will open in your browser (default: http://localhost:8501).
@@ -91,7 +108,7 @@ streamlit run app.py
 
 1. Upload a `.pkl`(cleaned_nusmods_with_embeddings) dataset via the sidebar.
 2. Click **Check Embeddings**.  
-   - If the uploaded file lacks an `embedding` column, click **Generate Embeddings** (the app will call `nomic-embed-text` to populate embeddings).
+   - If the uploaded file lacks an `embedding` column, click **Generate Embeddings** (the app will call your configured vLLM embedding model to populate embeddings).
 3. Enter a free-text query describing learning goals, interests, or constraints.
 4. Choose the retrieval mode:  
    - **LLM + Cosine Similarity**  

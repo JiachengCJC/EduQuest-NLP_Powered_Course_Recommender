@@ -2,8 +2,8 @@ import time
 import os
 import json
 import asyncio
-import nest_asyncio
-nest_asyncio.apply()
+import threading
+from queue import Queue
 
 import streamlit as st
 import pandas as pd
@@ -13,13 +13,33 @@ import re
 # ---- your project modules ----
 # Ensure PYTHONPATH includes the folder with these files (client.py, similarity.py, recommender/recommender.py)
 from EduQuest.recommend import EmbeddingRecommender
-from EduQuest.client import LocalOllamaClient
+from EduQuest.client import LocalVLLMClient
 from EduQuest.similarity import CosineSimilarityCalculator  # assuming you have this concrete class
 
 # ---------------------- helpers ----------------------
 def arun(coro):
     """Run async coroutines safely from Streamlit."""
-    return asyncio.run(coro)
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    result_queue: Queue = Queue(maxsize=1)
+
+    def _runner():
+        try:
+            result_queue.put((True, asyncio.run(coro)))
+        except Exception as exc:
+            result_queue.put((False, exc))
+
+    thread = threading.Thread(target=_runner, daemon=True)
+    thread.start()
+    thread.join()
+
+    ok, payload = result_queue.get()
+    if ok:
+        return payload
+    raise payload
 
 def sanitize_query(query: str, max_len: int = 30) -> str:
     """
@@ -52,15 +72,53 @@ def to_csv_filename(query: str, prefix: str = "results"):
 # ---------------------- page config ----------------------
 st.set_page_config(page_title="EduQuest-NUS Recommender", layout="wide")
 st.title("EduQuest-NUS Recommender")
-st.caption("Hybrid interface: LLM + Cosine vs FAISS | Type 0 = no rationales, Type 1 = with rationales")
+st.caption("Hybrid interface: vLLM + Cosine vs FAISS | Type 0 = no rationales, Type 1 = with rationales")
 
 # ---------------------- SIDEBAR: Data & Index (unchanged in spirit) ----------------------
 st.sidebar.header("Data & FAISS Index")
 
-data_path = st.sidebar.text_input("Courses PKL path", value="cleaned_nusmods.pkl")
+default_data_path = "cleaned_nusmods_with_embeddings.pkl"
+if not os.path.exists(default_data_path):
+    fallback_data_path = os.path.join("src", default_data_path)
+    if os.path.exists(fallback_data_path):
+        default_data_path = fallback_data_path
+
+data_path = st.sidebar.text_input("Courses PKL path", value=default_data_path)
+
+st.sidebar.header("LLM Using")
+with st.sidebar.expander("Model settings", expanded=False):
+    
+    generator_model = st.text_input(
+        "Generator model name (LLM)",
+        value=os.getenv("VLLM_GENERATOR_MODEL", "gemma-3-4b-it"),
+    )
+    rec_model = st.text_input(
+        "Recommendation model name (LLM)",
+        value=os.getenv("VLLM_REC_MODEL", "gemma-3-4b-it"),
+    )
+    embedding_model = st.text_input(
+        "Embedding model name",
+        value=os.getenv("VLLM_EMBEDDING_MODEL", "bge-small-en-v1.5"),
+    )
+
+    vllm_chat_base_url = st.text_input(
+        "vLLM chat base URL",
+        value=os.getenv("VLLM_CHAT_BASE_URL", "http://127.0.0.1:8000/v1"),
+    )
+    vllm_embedding_base_url = st.text_input(
+        "vLLM embedding base URL",
+        value=os.getenv("VLLM_EMBEDDING_BASE_URL", vllm_chat_base_url),
+    )
 
 @st.cache_resource(show_spinner=True)
-def load_system(csv_path: str):
+def load_system(
+    csv_path: str,
+    generator_model_name: str,
+    rec_model_name: str,
+    embedding_model_name: str,
+    chat_base_url: str,
+    embedding_base_url: str,
+):
     # 1) Load data
     if csv_path.endswith(".pkl"):
         df = pd.read_pickle(csv_path)
@@ -68,17 +126,27 @@ def load_system(csv_path: str):
         raise ValueError("Unsupported file format. Please use .pkl")
 
     # 2) Init models
-    client = LocalOllamaClient(
-        generator_model="mistral",            # for query expansion
-        rec_model="qwen2.5:7b-instruct",      # for recommendations/explanations
-        embedding_model="nomic-embed-text",   # for embeddings
+    client = LocalVLLMClient(
+        generator_model=generator_model_name,
+        rec_model=rec_model_name,
+        embedding_model=embedding_model_name,
+        chat_base_url=chat_base_url,
+        embedding_base_url=embedding_base_url,
+        api_key=os.getenv("VLLM_API_KEY", "EMPTY"),
     )
     sim = CosineSimilarityCalculator()
     rec = EmbeddingRecommender(client, sim)
     rec.load_courses(df.to_dict(orient="records"))
     return rec, df
 
-recommender, courses_df = load_system(data_path)
+recommender, courses_df = load_system(
+    data_path,
+    generator_model,
+    rec_model,
+    embedding_model,
+    vllm_chat_base_url,
+    vllm_embedding_base_url,
+)
 
 # =============== NEW: Embeddings Utility ===============
 st.sidebar.header("Embeddings Utility")
@@ -161,7 +229,7 @@ if st.sidebar.button("Build FAISS index", type="primary", use_container_width=Tr
 # ---------------------- MAIN CONTROLS ----------------------
 st.subheader("Search")
 
-q = st.text_area(
+query = st.text_area(
     "Student query",
     placeholder="e.g., I want to learn machine learning and deep learning for real-world applications.",
     height=90
@@ -222,18 +290,15 @@ type_choice = st.radio(
     index=0,
     help="Without Rationales = Show only top courses ranked by similarity. Rationales = Include LLM rationales."
 )
-if type_choice == "Rationales":
-    type_choice = 1
-else:
-    type_choice = 0
 
-rationales_mode = 0  # default to cosine-similarity ranking
-if model_choice.startswith("LLM + Cosine") and type_choice == 1:
+rationales_mode = "Cosine similarity ranking"  # default to cosine-similarity ranking
+if model_choice.startswith("LLM + Cosine") and type_choice == "Rationales":
     rationales_mode = st.radio(
         "Rationales ranking mode",
-        options=[0, 1],
+        options=["Cosine similarity ranking", "LLM ranking"],
         index=0,
-        format_func=lambda x: "Cosine similarity ranking" if x == 0 else "LLM ranking"
+        help=("Cosine similarity ranking: LLM generates rationales but courses are ranked by cosine similarity (faster).\n"
+              "LLM ranking: LLM generates rationales and also ranks courses based on relevance to the query (slower, more holistic).")
     )
 
 # FAISS extras
@@ -286,7 +351,7 @@ if st.button("Run recommendation", type="primary", use_container_width=True) and
         try:
             rec_text_or_msg, ranked_df = arun(
                 recommender.recommend(
-                    q,
+                    query,
                     levels=use_levels,
                     prefix=use_prefix,
                     top_k_rank=faiss_k,
@@ -298,13 +363,13 @@ if st.button("Run recommendation", type="primary", use_container_width=True) and
             st.success(f"Done in {elapsed:.2f}s")
 
             # Show outputs
-            if type_choice == 0:
+            if type_choice == "Without Rationales":
                 st.markdown("### Top Courses (by similarity)")
                 cols = ["course", "title", "prefix", "level", "similarity"] if "similarity" in ranked_df.columns else["course", "title", "prefix", "level"]
                 table = ranked_df[cols].head(faiss_k)
                 st.dataframe(table)
                 # Prepare downloads
-                download_csv_name = to_csv_filename(query=q, prefix="llm_cosine_top")
+                download_csv_name = to_csv_filename(query=query, prefix="llm_cosine_top")
                 download_csv_bytes = table.to_csv(index=False).encode("utf-8")
             else:
                 st.markdown("### Recommendations (with rationales, return at most 10 courses)")
@@ -314,9 +379,9 @@ if st.button("Run recommendation", type="primary", use_container_width=True) and
                 table = ranked_df[cols].head(faiss_k)
                 st.dataframe(table)
                 # Prepare downloads
-                download_md_name = to_markdown_filename(query=q, prefix="llm_cosine_rationales")
+                download_md_name = to_markdown_filename(query=query, prefix="llm_cosine_rationales")
                 download_md_bytes = rec_text_or_msg.encode("utf-8")
-                download_csv_name = to_csv_filename(query=q, prefix="llm_cosine_top")
+                download_csv_name = to_csv_filename(query=query, prefix="llm_cosine_top")
                 download_csv_bytes = table.to_csv(index=False).encode("utf-8")
 
         except Exception as e:
@@ -332,15 +397,15 @@ if st.button("Run recommendation", type="primary", use_container_width=True) and
         t0 = time.time()
 
         # Optional enrichment
-        text_for_embedding = q
+        text_for_embedding = query
         example = None
         if enrich:
             try:
-                example = arun(recommender.generate_example_description(q))
+                example = arun(recommender.generate_example_description(query))
                 if combine == "replace":
                     text_for_embedding = example
                 elif combine == "concat":
-                    text_for_embedding = f"{q}\n\nExpanded intent:\n{example}"
+                    text_for_embedding = f"{query}\n\nExpanded intent:\n{example}"
             except Exception as e:
                 st.warning(f"Enrichment failed: {e}")
 
@@ -357,12 +422,12 @@ if st.button("Run recommendation", type="primary", use_container_width=True) and
             elapsed = time.time() - t0
             st.success(f"Done in {elapsed:.2f}s")
 
-            if type_choice == 0:
+            if type_choice == "Without Rationales":
                 st.markdown("### Top Courses (by similarity)")
                 table = top_df[["course", "title", "prefix", "level", "similarity"]].head(faiss_k)
                 st.dataframe(table)
                 # Prepare downloads
-                download_csv_name = to_csv_filename(query=q, prefix="faiss_top")
+                download_csv_name = to_csv_filename(query=query, prefix="faiss_top")
                 download_csv_bytes = table.to_csv(index=False).encode("utf-8")
             else:
                 st.markdown("### Recommendations (with rationales)")
@@ -371,9 +436,9 @@ if st.button("Run recommendation", type="primary", use_container_width=True) and
                 table = top_df[["course", "title", "prefix", "level", "similarity"]].head(faiss_k)
                 st.dataframe(table)
                 # Prepare downloads
-                download_md_name = to_markdown_filename(query=q, prefix="faiss_rationales")
+                download_md_name = to_markdown_filename(query=query, prefix="faiss_rationales")
                 download_md_bytes = rec_text_or_msg.encode("utf-8")
-                download_csv_name = to_csv_filename(query=q, prefix="faiss_top")
+                download_csv_name = to_csv_filename(query=query, prefix="faiss_top")
                 download_csv_bytes = table.to_csv(index=False).encode("utf-8")
 
         except Exception as e:

@@ -1,47 +1,75 @@
 # recommender/client.py
-import asyncio
-import ollama
+import os
 from typing import List
 
-class LocalOllamaClient:
+from dotenv import load_dotenv
+from openai import AsyncOpenAI
+
+load_dotenv()
+
+
+class LocalVLLMClient:
     """
-    Wrapper around local Ollama models for text generation and embeddings.
+    Wrapper around OpenAI-compatible vLLM endpoints for generation and embeddings.
     """
 
     def __init__(
         self,
-        generator_model: str = "mistral",
-        rec_model: str = "qwen2.5:7b-instruct",
-        embedding_model: str = "nomic-embed-text",
+        generator_model: str = "",
+        rec_model: str = "",
+        embedding_model: str = "",
+        chat_base_url: str = "",
+        embedding_base_url: str = "",
+        api_key: str = "",
+        timeout: float = 360.0,
     ):
-        self.generator_model = generator_model
-        self.rec_model = rec_model
-        self.embedding_model = embedding_model
+        self.generator_model = generator_model or os.getenv("VLLM_GENERATOR_MODEL", "qwen-local")
+        self.rec_model = rec_model or os.getenv("VLLM_REC_MODEL", "qwen-local")
+        self.embedding_model = embedding_model or os.getenv("VLLM_EMBEDDING_MODEL", "bge-local")
 
-    async def generate_text(self, prompt: str, model: str, max_tokens: int = 8000) -> str:
+        resolved_api_key = api_key or os.getenv("VLLM_API_KEY", "EMPTY")
+        resolved_chat_base_url = chat_base_url or os.getenv("VLLM_CHAT_BASE_URL", "http://127.0.0.1:8000/v1")
+        resolved_embedding_base_url = embedding_base_url or os.getenv(
+            "VLLM_EMBEDDING_BASE_URL",
+            resolved_chat_base_url,
+        )
+
+        self.chat_client = AsyncOpenAI(
+            api_key=resolved_api_key,
+            base_url=resolved_chat_base_url,
+            timeout=timeout,
+        )
+        self.embedding_client = AsyncOpenAI(
+            api_key=resolved_api_key,
+            base_url=resolved_embedding_base_url,
+            timeout=timeout,
+        )
+
+    async def generate_text(self, prompt: str, model: str, max_tokens: int = 100000) -> str:
         """
-        Generate text using a local Ollama model.
+        Generate text using a model served by vLLM's OpenAI-compatible API.
         """
-        loop = asyncio.get_event_loop()
-
-        def _call():
-            return ollama.chat(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                options={"num_predict": max_tokens, "temperature": 0.0},
-            )
-
-        resp = await loop.run_in_executor(None, _call)
-        return resp["message"]["content"]
+        resp = await self.chat_client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=0.0,
+        )
+        print(f"Debug: Received response from vLLM: {resp.choices[0].message.content}")
+        return resp.choices[0].message.content or ""
 
     async def generate_embedding(self, text: str) -> List[float]:
         """
-        Generate embeddings for a given text using Ollama embedding model.
+        Generate embeddings using a model served by vLLM's embeddings endpoint.
         """
-        loop = asyncio.get_event_loop()
+        resp = await self.embedding_client.embeddings.create(
+            model=self.embedding_model,
+            input=text,
+        )
+        return resp.data[0].embedding
 
-        def _call():
-            return ollama.embeddings(model=self.embedding_model, prompt=text)
 
-        resp = await loop.run_in_executor(None, _call)
-        return resp["embedding"]
+# Backward compatibility for old imports while migrating from Ollama.
+# LocalOllamaClient = LocalVLLMClient
+
+

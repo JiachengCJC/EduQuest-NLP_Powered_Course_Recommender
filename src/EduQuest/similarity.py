@@ -19,3 +19,13 @@ class CosineSimilarityCalculator(SimilarityCalculator):
         norm_vec1 = np.linalg.norm(vec1)
         norm_vec2 = np.linalg.norm(vec2)
         return dot_product / (norm_vec1 * norm_vec2)
+
+# Alternative similarity calculator based on Euclidean distance
+class EuclideanSimilarityCalculator(SimilarityCalculator):
+    """
+    Calculates similarity based on distance. 
+    Formula: 1 / (1 + distance) to keep it in a 0-1 range.
+    """
+    def calculate(self, vec1: List[float], vec2: List[float]) -> float:
+        distance = np.linalg.norm(np.array(vec1) - np.array(vec2))
+        return 1 / (1 + distance)
